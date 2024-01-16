@@ -3,6 +3,7 @@ from fastapi import HTTPException
 from app import models
 import requests
 import xml.etree.ElementTree as ET
+from datetime import date
 
 def clean_database(db: Session):
     try:
@@ -33,6 +34,8 @@ def update_database(db: Session):
             attributes = child.attrib
             if attributes.get('TIME_PERIOD'):
                 time = attributes['TIME_PERIOD']
+                # String to date (string format: YYYY-MM)
+                time = date(int(time[:4]), int(time[5:]), 1)
 
                 if not db.query(models.Euribor).filter(models.Euribor.TimePeriod == time).first():
                     db_entry = models.Euribor(
