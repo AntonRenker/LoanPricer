@@ -49,3 +49,16 @@ def update_database(db: Session):
                     db.commit()
     except requests.RequestException as e:
         print(f"Error during data update: {str(e)}")
+
+def get_entries_date(start_date: str, end_date: str, db: Session):
+    try:
+        start_date = date(int(start_date[:4]), int(start_date[5:]), 1)
+        end_date = date(int(end_date[:4]), int(end_date[5:]), 1)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=f"Invalid date format, should be 'YYYY-MM': {str(e)}")
+
+    try:
+        return db.query(models.Euribor).filter(models.Euribor.TimePeriod >= start_date, models.Euribor.TimePeriod <= end_date).all()
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error getting entries from database: {str(e)}")
+      
