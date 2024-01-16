@@ -1,6 +1,7 @@
 from sqlalchemy import Column, Float, String
-from database import Base
+from sqlalchemy.ext.declarative import declarative_base
 
+Base = declarative_base()
 
 class Euribor(Base):
     __tablename__ = "Euribor"
