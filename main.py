@@ -6,9 +6,6 @@ from app.schema import Euribor
 from database_operations import *
 
 app = FastAPI()
-@app.post("/")
-async def root():
-    return {"message": "API is running"}
 
 @app.post("/update-database")
 async def update_data_base(db: Session = Depends(get_db)):
