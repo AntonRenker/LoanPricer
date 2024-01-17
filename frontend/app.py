@@ -1,5 +1,3 @@
-# The shinyswatch package provides themes from https://bootswatch.com/
-
 import shinyswatch
 from shiny import App, render, ui, reactive
 import requests
@@ -7,6 +5,7 @@ import pandas as pd
 import matplotlib.pyplot as plt
 
 app_ui = ui.page_navbar(
+
     shinyswatch.theme.superhero(),
     ui.nav(
         "EURIBOR Daten",
@@ -28,6 +27,16 @@ app_ui = ui.page_navbar(
                         ui.tags.h4("Euribor Diff vs Time"),
                         ui.output_plot("plot_euribor_diff"),
                     ),
+                    ui.nav(
+                        "Euribor Tabelle",
+                        ui.tags.h4("Euribor Diff vs Time"),
+                        ui.output_data_frame("grid"),
+                        ui.panel_fixed(
+                        ui.output_text_verbatim("detail"),
+                        right="10px",
+                        bottom="10px",
+                        ),
+                    ),
                 )
             ),
         ),
@@ -38,6 +47,35 @@ app_ui = ui.page_navbar(
 
 
 def server(input, output, session):
+    @output
+    @render.data_frame
+    async def grid():
+        url = "http://localhost:8000/get-entries-all"
+
+        try:
+            response = requests.get(url)
+
+            # Check if the request was successful (status code 200)
+            if response.status_code == 200:
+                # Print the response content
+                
+                df = pd.json_normalize(response.json())  # Assuming the response is in JSON format
+            else:
+                print(f"Error: {response.status_code} - {response.text}")
+
+        except requests.exceptions.RequestException as e:
+            print(f"Error: {e}")
+        height = 350
+        width = "100%"
+        return render.DataGrid(
+                df,
+                row_selection_mode="single",
+                height=height,
+                width=width,
+                filters=True,
+            )
+
+        
     @output
     @render.plot(alt="Euribor Diff vs Time")
     @reactive.event(input.make_plot)
