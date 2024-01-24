@@ -50,7 +50,7 @@ def server(input, output, session):
     @output
     @render.data_frame
     async def grid():
-        url = "http://localhost:8000/get-entries-all"
+        url = "http://localhost:8000/get-euribor-entries-all"
 
         try:
             response = requests.get(url)
@@ -82,7 +82,7 @@ def server(input, output, session):
     async def plot_euribor_diff():
         start_date = input.start_date()
         end_date = input.end_date()
-        url = f"http://localhost:8000/get-entries/{str(start_date)}/{str(end_date)}"
+        url = f"http://localhost:8000/get-euribor-entries/{str(start_date)}/{str(end_date)}"
 
         try:
             response = requests.get(url)
@@ -122,7 +122,7 @@ def server(input, output, session):
     async def plot_euribor():
         start_date = input.start_date()
         end_date = input.end_date()
-        url = f"http://localhost:8000/get-entries/{str(start_date)}/{str(end_date)}"
+        url = f"http://localhost:8000/get-euribor-entries/{str(start_date)}/{str(end_date)}"
 
         try:
             response = requests.get(url)
