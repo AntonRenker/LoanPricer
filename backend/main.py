@@ -1,9 +1,9 @@
-from fastapi import FastAPI, HTTPException, Depends
-import app.models as models
-from app.database import get_db, create_tables
+from fastapi import FastAPI, Depends
+import backend.app.models as models
+from backend.app.database import get_db, create_tables
 from sqlalchemy.orm import Session
-from app.schema import Euribor
-from database_operations import *
+from backend.app.schema import Euribor
+from backend.database_operations import *
 
 app = FastAPI()
 create_tables()
