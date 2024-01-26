@@ -3,6 +3,8 @@ from shiny import App, render, ui, reactive
 import requests
 import pandas as pd
 import matplotlib.pyplot as plt
+from frontend.schedule import Schedule
+import QuantLib as ql
 
 app_ui = ui.page_navbar(
 
@@ -30,18 +32,80 @@ app_ui = ui.page_navbar(
                     ui.nav(
                         "Euribor Tabelle",
                         ui.tags.h4("Euribor Diff vs Time"),
-                        ui.output_data_frame("grid"),
+                        ui.output_data_frame("euribor"),
                         ui.panel_fixed(
-                        ui.output_text_verbatim("detail"),
-                        right="10px",
-                        bottom="10px",
+                            ui.output_text_verbatim("detail"),
+                            right="10px",
+                            bottom="10px",
                         ),
                     ),
                 )
             ),
         ),
     ),
-    ui.nav("Test"),
+    ui.nav("Schedule",
+           ui.layout_sidebar(
+            ui.panel_sidebar(
+                ui.input_date("effectiveDate", "Effective Date Input"), 
+                ui.input_select("tenor", "Select Tenor", {
+                    "1Y": "1 Year", "2Y": "2 Years",
+                    "3Y": "3 Years", "4Y": "4 Years", 
+                    "5Y": "5 Years", "6Y": "6 Years", 
+                    "7Y": "7 Years", "8Y": "8 Years", 
+                    "9Y": "9 Years", "10Y": "10 Years"}
+                ),
+                ui.input_select("frequency", "Select Frequency", {
+                    "1M": "1 Month", "2M": "2 Months",
+                    "3M": "3 Months", "4M": "4 Months",
+                    "1Y": "1 Year", "2Y": "2 Years",
+                    "3Y": "3 Years", "4Y": "4 Years", 
+                    "5Y": "5 Years", "6Y": "6 Years", 
+                    "7Y": "7 Years", "8Y": "8 Years", 
+                    "9Y": "9 Years", "10Y": "10 Years"}
+                ),
+                ui.input_select("calendar", "Select Calendar", {
+                    "GER": "Germany", "USA": "USA",
+                    "UK": "United Kingdom", "AUS": "Australia",
+                    "BRA": "Brazil", "CAN": "Canada",
+                    "SK": "South Korea", "FRA": "France"}
+                ),
+                ui.input_select("holidayConvention", "Select Holiday Convention", {
+                    "cP": "Preceding", "cF": "Following",
+                    "cMF": "Modified Following", "cMP": "Modified Preceding",
+                    "cU": "Unadjusted", "cN": "Null Calendar"}
+                ),
+                ui.input_select("terminationDateConvention", "Termination Date Convention", {
+                    "tP": "Preceding", "tF": "Following",
+                    "tMF": "Modified Following", "tMP": "Modified Preceding",
+                    "tU": "Unadjusted", "tN": "Null Calendar"}
+                ),
+                ui.input_select("dateGenerationRule", "Date Generation Rule", {
+                    "dForward": "Forward",
+                    "dBackward": "Backward",
+                    "dZero": "Zero",
+                    "dThirdWednesday": "Third Wednesday",
+                    "dTwentieth": "Twentieth",
+                    "dTwentiethIMM": "Twentieth IMM",
+                    "dOldCDS": "Old CDS",
+                    "dCDS": "CDS"}
+                ),
+                ui.input_select("dayCountConvention", "Day Count Convention", {
+                    "dcActual360": "Actual 360",
+                    "dcActual365Fixed": "Actual 365 (Fixed)",
+                    "dcActualActualISDA": "Actual Actual (ISDA)",
+                    "dcActualActualAFB": "Actual Actual (AFB)",
+                    "dcActualActualISMA": "Actual Actual (ISMA)",
+                    "dcBusiness252": "Business 252"}
+                ),
+                ui.input_switch("endOfMonthRule", "End of Month Rule"),
+                ui.input_action_button("make_schedule", "Make Schedule!"),
+            ),
+            ui.panel_main(
+                ui.tags.h4("Schedule"),
+                ui.output_data_frame("schedule"),
+            ),
+        ),
+    ),
     title="Loan Pricing",
 )
 
@@ -49,7 +113,45 @@ app_ui = ui.page_navbar(
 def server(input, output, session):
     @output
     @render.data_frame
-    async def grid():
+    @reactive.event(input.make_schedule)
+    async def schedule():
+        # ql.Date(str(input.effectiveDate()), "%Y-%m-%d")
+        # input.tenor()
+        # ql.Period(input.frequency())
+        # for calendar make switch case
+        # for holidayConvention make switch case
+        # for terminationDateConvention make switch case
+        # for dateGenerationRule make switch case
+        # input.endOfMonthRule()
+        # for dayCountConvention make switch case
+        user_input = {
+            "effectiveDate": str(input.effectiveDate()),
+            "tenor": input.tenor(),
+            "frequency": input.frequency(),
+            "calendar": input.calendar(),
+            "holidayConvention": input.holidayConvention(),
+            "terminationDateConvention": input.terminationDateConvention(),
+            "dateGenerationRule": input.dateGenerationRule(),
+            "endOfMonthRule": input.endOfMonthRule(),
+            "dayCountConvention": input.dayCountConvention(),
+        }
+        height = 350
+        width = "100%"
+        df = pd.DataFrame(Schedule.init_with_ql(user_input))
+        df['StartDate'] = df['StartDate'].apply(lambda x: x.ISO())
+        df['EndDate'] = df['EndDate'].apply(lambda x: x.ISO())
+        df['MidDate'] = df['MidDate'].apply(lambda x: x.ISO())
+        return render.DataGrid(
+                df,
+                row_selection_mode="single",
+                height=height,
+                width=width,
+                filters=True,
+            )
+    
+    @output
+    @render.data_frame
+    async def euribor():
         url = "http://localhost:8000/get-euribor-entries-all"
 
         try:
