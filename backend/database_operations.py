@@ -88,17 +88,17 @@ def get_entries_by_issuer(issuer: str, db: Session):
         if entries:
             return entries
         else:
-            return {"message": f"No entries found for issuer: {issuer}"}
+            return {"message": f"No entries found for issuer"}
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error getting entries from database: {str(e)}")
     
 def get_entries_by_entity_identifier(entity_identifier: str, db: Session):
     try:
-        entry = db.query(models.Rating).filter(models.Rating.LegalEntityIdentifier == entity_identifier).first()
-        if entry:
-            return entry
+        entries = db.query(models.Rating).filter(models.Rating.LegalEntityIdentifier.contains(entity_identifier)).all()
+        if entries:
+            return entries
         else:
-            return {"message": f"No entry found for entity identifier: {entity_identifier}"}
+            return {"message": f"No entries found for entity identifier"}
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error getting entries from database: {str(e)}")
     

@@ -4,7 +4,6 @@ import requests
 import pandas as pd
 import matplotlib.pyplot as plt
 from frontend.schedule import Schedule
-import QuantLib as ql
 
 app_ui = ui.page_navbar(
 
@@ -44,7 +43,7 @@ app_ui = ui.page_navbar(
         ),
     ),
     ui.nav("Schedule",
-           ui.layout_sidebar(
+        ui.layout_sidebar(
             ui.panel_sidebar(
                 ui.input_date("effectiveDate", "Effective Date Input"), 
                 ui.input_select("tenor", "Select Tenor", {
@@ -106,24 +105,102 @@ app_ui = ui.page_navbar(
             ),
         ),
     ),
+    ui.nav("Ratings",
+        ui.layout_sidebar(
+            ui.panel_sidebar(
+                ui.input_text("companyName", "Search by Company Name", placeholder="Company Name"),
+                ui.input_action_button("searchCompanyName", "Search Company"),
+                ui.input_text("legalEntity", "Search by Legal Entity", placeholder="Legal Entity Number"),
+                ui.input_action_button("searchCompanyEntity", "Search Company"),
+                ui.input_select("companyNameSuggestion", "Company Name Suggestion", []),
+                ui.input_action_button("showRating", "Show Rating", class_="btn-primary"),
+            ),
+            ui.panel_main(
+                ui.tags.h4("Ratings"),
+                ui.output_text("ratingOutput"),
+            ),
+        ),
+        
+    ),
     title="Loan Pricing",
 )
 
 
 def server(input, output, session):
+
+    @reactive.Effect
+    @reactive.event(input.legalEntity)
+    def _():
+        entity = input.legalEntity()
+        url = f'http://localhost:8000/get-rating-by-entity-identifier/{entity}'
+
+        try:
+            response = requests.get(url)
+
+            if response.status_code == 200:
+                if response.json() == {"message": f"No entries found for entity identifier"}:
+                    suggestions = ["No suggestions found"]
+                else:
+                    suggestions = pd.json_normalize(response.json())
+                    suggestions = list(suggestions['Issuer'])
+                ui.update_select(
+                    "companyNameSuggestion",
+                    label="Select Company",
+                    choices=suggestions,
+                )
+        except requests.exceptions.RequestException as e:
+            print(f"Error: {e}")
+
+    @reactive.Effect
+    @reactive.event(input.searchCompanyName)
+    def _():
+        companyName = input.companyName()
+        url = f'http://localhost:8000/get-rating-by-issuer/{companyName}'
+
+        try:
+            response = requests.get(url)
+
+            if response.status_code == 200:
+                if response.json() == {"message": f"No entries found for issuer"}:
+                    suggestions = ["No suggestions found"]
+                else:
+                    suggestions = pd.json_normalize(response.json())
+                    suggestions = list(suggestions['Issuer'])
+
+                
+
+                ui.update_select(
+                    "companyNameSuggestion",
+                    label="Select Company",
+                    choices=suggestions,
+                )
+        except requests.exceptions.RequestException as e:
+            print(f"Error: {e}")
+
+    @output
+    @render.text
+    @reactive.event(input.showRating)
+    def ratingOutput():
+        companyName = input.companyNameSuggestion()
+        rating = ""
+        url = f'http://localhost:8000/get-rating-by-issuer/{companyName}'
+        try:
+            response = requests.get(url)
+
+            if response.status_code == 200:
+                if response.json() != {"message": f"No entries found for issuer"}:
+                    suggestions = pd.json_normalize(response.json())
+                    rating = suggestions['Rating'].iloc[0]
+
+        except requests.exceptions.RequestException as e:
+            print(f"Error: {e}")
+        
+        return f"{companyName}: {rating}"
+    
     @output
     @render.data_frame
     @reactive.event(input.make_schedule)
     async def schedule():
-        # ql.Date(str(input.effectiveDate()), "%Y-%m-%d")
-        # input.tenor()
-        # ql.Period(input.frequency())
-        # for calendar make switch case
-        # for holidayConvention make switch case
-        # for terminationDateConvention make switch case
-        # for dateGenerationRule make switch case
-        # input.endOfMonthRule()
-        # for dayCountConvention make switch case
         user_input = {
             "effectiveDate": str(input.effectiveDate()),
             "tenor": input.tenor(),
